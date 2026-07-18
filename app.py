@@ -16,18 +16,17 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from werkzeug.utils import secure_filename
+import threading
+import uuid
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all domains so Next.js on port 3000 can talk to it
+
+# Global dictionary to store job statuses
+jobs = {}
 
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -116,21 +115,46 @@ def redact():
         if not input_path:
             return jsonify({'error': 'Uploaded file not found. Please re-upload.'}), 404
 
-        # Import engine
-        from pii_engine import redact_docx, clear_mapping as clear_map, redact_text_segment
+        # Generate a unique job ID
+        job_id = str(uuid.uuid4())
+        
+        # Initialize job status
+        jobs[job_id] = {
+            'status': 'processing',
+            'progress': 0,
+            'result': None,
+            'error': None
+        }
 
+        # Start background thread
+        thread = threading.Thread(
+            target=process_redaction_job,
+            args=(job_id, input_path, ext, original_name, selected_types, clear_mapping, app.config['OUTPUT_FOLDER'])
+        )
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Redaction started in background'
+        })
+
+    except Exception as e:
+        logger.error(f"Redaction initiation error: {traceback.format_exc()}")
+        return jsonify({'error': f'Failed to start redaction: {str(e)}'}), 500
+
+def process_redaction_job(job_id, input_path, ext, original_name, selected_types, clear_mapping, output_folder):
+    """Background worker that performs the actual heavy lifting."""
+    try:
+        from pii_engine import redact_docx, clear_mapping as clear_map, redact_text_segment
+        
         if clear_mapping:
             clear_map()
 
-        # Generate output filename
         base_name = original_name.rsplit('.', 1)[0] if '.' in original_name else original_name
         output_filename = f"Redacted_{base_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+        output_path = os.path.join(output_folder, output_filename)
 
-        logger.info(f"Starting redaction: {input_path} → {output_path}")
-        logger.info(f"Selected PII types: {selected_types or 'ALL'}")
-
-        # Process based on file type
         stats = {}
         if ext == 'docx':
             stats = redact_docx(input_path, output_path, selected_types or None)
@@ -138,7 +162,6 @@ def redact():
             with open(input_path, 'r', encoding='utf-8', errors='replace') as f:
                 text = f.read()
             redacted_text, findings = redact_text_segment(text, selected_types or None)
-            # Save as a basic docx
             from docx import Document
             doc = Document()
             for line in redacted_text.split('\n'):
@@ -146,14 +169,9 @@ def redact():
             doc.save(output_path)
             stats = {
                 'total_findings': len(findings),
-                'entity_counts': {},
                 'paragraphs_processed': len(text.split('\n'))
             }
-            for f in findings:
-                et = f['entity_type']
-                stats['entity_counts'][et] = stats['entity_counts'].get(et, 0) + 1
         elif ext == 'pdf':
-            # For PDF: extract text, redact, save as docx
             try:
                 import fitz
                 pdf_doc = fitz.open(input_path)
@@ -166,7 +184,6 @@ def redact():
 
                 from docx import Document as DocxDoc
                 doc = DocxDoc()
-                doc.add_heading('Redacted Document', 0)
                 for line in redacted_text.split('\n'):
                     if line.strip():
                         doc.add_paragraph(line)
@@ -174,27 +191,34 @@ def redact():
 
                 stats = {
                     'total_findings': len(findings),
-                    'entity_counts': {},
                     'paragraphs_processed': len(full_text.split('\n'))
                 }
-                for f in findings:
-                    et = f['entity_type']
-                    stats['entity_counts'][et] = stats['entity_counts'].get(et, 0) + 1
-            except ImportError:
-                return jsonify({'error': 'PyMuPDF not installed. Please use DOCX format.'}), 500
+            except Exception as e:
+                jobs[job_id]['status'] = 'failed'
+                jobs[job_id]['error'] = str(e)
+                return
 
-        logger.info(f"Redaction complete: {stats}")
-
-        return jsonify({
+        jobs[job_id]['status'] = 'completed'
+        jobs[job_id]['result'] = {
             'success': True,
             'output_filename': output_filename,
             'stats': stats,
             'message': f"Successfully redacted {stats.get('total_findings', 0)} PII instances"
-        })
+        }
 
     except Exception as e:
-        logger.error(f"Redaction error: {traceback.format_exc()}")
-        return jsonify({'error': f'Redaction failed: {str(e)}'}), 500
+        logger.error(f"Background job error: {traceback.format_exc()}")
+        jobs[job_id]['status'] = 'failed'
+        jobs[job_id]['error'] = str(e)
+
+
+@app.route('/api/status/<job_id>', methods=['GET'])
+def get_status(job_id):
+    """Check the status of a background redaction job."""
+    if job_id not in jobs:
+        return jsonify({'error': 'Job not found'}), 404
+        
+    return jsonify(jobs[job_id])
 
 
 @app.route('/api/download/<filename>', methods=['GET'])

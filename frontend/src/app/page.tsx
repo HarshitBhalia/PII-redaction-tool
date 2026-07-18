@@ -112,13 +112,26 @@ export default function Home() {
         }),
       });
       
-      if (!redactRes.ok) throw new Error('Failed to process file');
-      const redactData = await redactRes.json();
+      if (!redactRes.ok) throw new Error('Failed to start processing');
+      const { job_id } = await redactRes.json();
       
-      if (redactData.success) {
-        setResult(redactData);
-      } else {
-        throw new Error(redactData.error || 'Processing failed');
+      if (!job_id) throw new Error('No job ID returned from server');
+
+      // Poll for status every 3 seconds
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const statusRes = await fetch(`${API_URL}/api/status/${job_id}`);
+        
+        if (!statusRes.ok) throw new Error('Failed to check status');
+        const statusData = await statusRes.json();
+
+        if (statusData.status === 'completed') {
+          setResult(statusData.result);
+          break;
+        } else if (statusData.status === 'failed') {
+          throw new Error(statusData.error || 'Processing failed on server');
+        }
+        // If status is 'processing', loop continues and waits another 3 seconds
       }
       
     } catch (err: any) {
