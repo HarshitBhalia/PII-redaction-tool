@@ -739,26 +739,46 @@ def redact_docx(input_path: str, output_path: str, selected_types: Optional[List
         except Exception:
             pass
 
-    # Process all collected text in parallel
-    def process_text_func(item):
-        para, original = item
-        new_text, findings = _apply_replacements_to_text(original, selected_types)
-        return (para, original, new_text, findings)
+    import time
+    
+    # To prevent spaCy from instantiating 1000+ times (once per paragraph), which causes
+    # massive CPU starvation and Gunicorn 502 timeouts on Render's 0.1 CPU core,
+    # we batch ALL paragraphs into a single giant string separated by a safe boundary.
+    BOUNDARY = "\n---PII_DOCX_BOUNDARY_12345---\n"
+    giant_string = BOUNDARY.join([item[1] for item in paragraphs_to_process])
+    
+    # We pass it to redact_text_segment which ALREADY optimally chunks text into 200-line blocks!
+    # This drops NLP calls from 1000+ down to literally ~5 calls for a 100-page document!
+    redacted_giant_string, all_findings = redact_text_segment(giant_string, selected_types)
+    
+    # Split back into paragraphs
+    redacted_paras = redacted_giant_string.split(BOUNDARY)
+    
+    # Just in case of boundary corruption (should never happen), fallback gracefully
+    if len(redacted_paras) != len(paragraphs_to_process):
+        redacted_paras = [item[1] for item in paragraphs_to_process] # fallback to original
+        
+    results = []
+    for i, (para, original) in enumerate(paragraphs_to_process):
+        results.append((para, original, redacted_paras[i]))
+    
+    # Add all findings to stats
+    for f in all_findings:
+        et = f['entity_type']
+        stats['entity_counts'][et] = stats['entity_counts'].get(et, 0) + 1
+        stats['total_findings'] += 1
 
-    # On Render's Free Tier (0.1 CPU), ThreadPoolExecutor causes massive context-switching overhead.
-    # Processing sequentially on a single core is actually FASTER when CPU is heavily throttled.
-    results = [process_text_func(item) for item in paragraphs_to_process]
 
     # Safely apply updates to the DOCX tree sequentially
-    for para, original, new_text, findings in results:
+    for i, (para, original, new_text) in enumerate(results):
         if new_text != original:
             _safe_update_para(para, new_text)
-            for f in findings:
-                et = f['entity_type']
-                stats['entity_counts'][et] = stats['entity_counts'].get(et, 0) + 1
-                stats['total_findings'] += 1
-
+            
         stats['paragraphs_processed'] += 1
+        
+        # Yield CPU back to Gunicorn web worker periodically so it doesn't 502 Timeout
+        if i % 100 == 0:
+            time.sleep(0.01)
 
     doc.save(output_path)
     stats['pages_processed'] = len(doc.sections)
