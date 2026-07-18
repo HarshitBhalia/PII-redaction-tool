@@ -5,9 +5,7 @@ Welcome to **Privacy Shield**! This is a full-stack, AI-powered application desi
 Unlike standard redaction tools that just black out text, Privacy Shield replaces sensitive data with **realistic, context-aware synthetic data** (e.g., replacing a real name with a fake name, or a real phone number with a fake one) to maintain the readability and flow of the document.
 
 ### 🔗 Links
-- **GitHub Repository**: [https://github.com/HarshitBhalia/PII-redaction-tool](https://github.com/HarshitBhalia/PII-redaction-tool)
-- **Live Frontend (Vercel)**: *[Add your Vercel URL here]*
-- **Live API Backend (Render)**: [https://pii-redaction-tool-v1t9.onrender.com](https://pii-redaction-tool-v1t9.onrender.com)
+- **Live Project**: [https://pii-redaction-tool-sigma.vercel.app/](https://pii-redaction-tool-sigma.vercel.app/)
 
 ---
 
