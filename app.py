@@ -22,6 +22,13 @@ from werkzeug.utils import secure_filename
 import threading
 import uuid
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 CORS(app) # Enable CORS for all domains so Next.js on port 3000 can talk to it
 
