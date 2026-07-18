@@ -125,18 +125,21 @@ def redact():
         # Generate a unique job ID
         job_id = str(uuid.uuid4())
         
-        # Initialize job status
-        jobs[job_id] = {
-            'status': 'processing',
-            'progress': 0,
-            'result': None,
-            'error': None
-        }
+        # Initialize job status in a file instead of memory (fixes multi-worker 404s)
+        import json
+        job_file = os.path.join(tempfile.gettempdir(), f"job_{job_id}.json")
+        with open(job_file, 'w') as f:
+            json.dump({
+                'status': 'processing',
+                'progress': 0,
+                'result': None,
+                'error': None
+            }, f)
 
         # Start background thread
         thread = threading.Thread(
             target=process_redaction_job,
-            args=(job_id, input_path, ext, original_name, selected_types, clear_mapping, app.config['OUTPUT_FOLDER'])
+            args=(job_id, input_path, ext, original_name, selected_types, clear_mapping, app.config['OUTPUT_FOLDER'], job_file)
         )
         thread.start()
 
@@ -150,8 +153,22 @@ def redact():
         logger.error(f"Redaction initiation error: {traceback.format_exc()}")
         return jsonify({'error': f'Failed to start redaction: {str(e)}'}), 500
 
-def process_redaction_job(job_id, input_path, ext, original_name, selected_types, clear_mapping, output_folder):
+def process_redaction_job(job_id, input_path, ext, original_name, selected_types, clear_mapping, output_folder, job_file):
     """Background worker that performs the actual heavy lifting."""
+    import json
+    
+    def update_job(status, result=None, error=None):
+        try:
+            with open(job_file, 'r') as f:
+                data = json.load(f)
+            data['status'] = status
+            if result is not None: data['result'] = result
+            if error is not None: data['error'] = error
+            with open(job_file, 'w') as f:
+                json.dump(data, f)
+        except Exception as ex:
+            logger.error(f"Failed to update job file: {ex}")
+
     try:
         from pii_engine import redact_docx, clear_mapping as clear_map, redact_text_segment
         
@@ -201,31 +218,37 @@ def process_redaction_job(job_id, input_path, ext, original_name, selected_types
                     'paragraphs_processed': len(full_text.split('\n'))
                 }
             except Exception as e:
-                jobs[job_id]['status'] = 'failed'
-                jobs[job_id]['error'] = str(e)
+                update_job('failed', error=str(e))
                 return
 
-        jobs[job_id]['status'] = 'completed'
-        jobs[job_id]['result'] = {
+        update_job('completed', result={
             'success': True,
             'output_filename': output_filename,
             'stats': stats,
             'message': f"Successfully redacted {stats.get('total_findings', 0)} PII instances"
-        }
+        })
 
     except Exception as e:
         logger.error(f"Background job error: {traceback.format_exc()}")
-        jobs[job_id]['status'] = 'failed'
-        jobs[job_id]['error'] = str(e)
+        update_job('failed', error=str(e))
 
 
 @app.route('/api/status/<job_id>', methods=['GET'])
 def get_status(job_id):
-    """Check the status of a background redaction job."""
-    if job_id not in jobs:
+    """Check the status of a background redaction job using the filesystem."""
+    import json
+    import tempfile
+    job_file = os.path.join(tempfile.gettempdir(), f"job_{job_id}.json")
+    
+    if not os.path.exists(job_file):
         return jsonify({'error': 'Job not found'}), 404
         
-    return jsonify(jobs[job_id])
+    try:
+        with open(job_file, 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': f'Failed to read job status: {str(e)}'}), 500
 
 
 @app.route('/api/download/<filename>', methods=['GET'])
