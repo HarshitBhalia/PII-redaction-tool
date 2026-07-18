@@ -454,17 +454,34 @@ def _run_regex_layer(text: str) -> List[Dict]:
     return findings
 
 
-def _run_presidio_layer(text: str) -> List[Dict]:
-    """Run Presidio NER detection."""
+def _run_presidio_layer(text: str, selected_types: Optional[List[str]] = None) -> List[Dict]:
+    """Run Presidio NER detection only for requested NLP entities."""
     findings = []
     try:
         analyzer = _get_analyzer()
         if not analyzer:
             return findings
 
+        # Filter the entities passed to Presidio to ONLY the slow NLP ones requested
+        target_entities = []
+        if selected_types:
+            expanded = set()
+            for sel in selected_types:
+                expanded.update(_TYPE_EXPANSION.get(sel.upper(), [sel.upper()]))
+            
+            # Only ask Presidio to find these heavy NLP entities if requested
+            for ner_type in ['PERSON', 'ORG', 'LOCATION', 'NRP']:
+                if ner_type in expanded:
+                    target_entities.append(ner_type)
+        else:
+            target_entities = ['PERSON', 'ORG', 'LOCATION', 'NRP']
+            
+        if not target_entities:
+            return findings # Nothing to do
+
         results = analyzer.analyze(
             text=text,
-            entities=PRESIDIO_ENTITIES,
+            entities=target_entities,
             language='en',
             score_threshold=0.45,
         )
@@ -547,8 +564,24 @@ def detect_pii(text: str, selected_types: Optional[List[str]] = None) -> List[Di
     if not text or not text.strip():
         return []
 
-    # Run both layers
-    all_findings = _run_regex_layer(text) + _run_presidio_layer(text)
+    # Fast layer (Regex)
+    all_findings = _run_regex_layer(text)
+    
+    # Check if we need the slow NER layer
+    needs_ner = True
+    if selected_types is not None:
+        ner_types = {'PERSON', 'ORG', 'LOCATION', 'NRP'}
+        # Expand user's selected types to see if they need NER
+        expanded_selected = set()
+        for sel in selected_types:
+            expanded_selected.update(_TYPE_EXPANSION.get(sel.upper(), [sel.upper()]))
+        
+        # If intersection is empty, we don't need NER!
+        if not ner_types.intersection(expanded_selected):
+            needs_ner = False
+
+    if needs_ner:
+        all_findings += _run_presidio_layer(text, selected_types)
 
     # Merge overlaps
     merged = _merge_spans(all_findings)
@@ -570,8 +603,9 @@ def redact_text_segment(text: str, selected_types: Optional[List[str]] = None) -
     redacted_lines = []
     all_findings = []
     
-    # Chunk lines into groups of 50 to drastically reduce spaCy overhead (50x faster than line-by-line)
-    CHUNK_SIZE = 50
+    # Chunk lines into groups of 200 to drastically reduce spaCy overhead (200x faster than line-by-line)
+    # 200 lines is about ~15KB, which is perfectly safe for 512MB RAM but minimizes NLP instantiation overhead.
+    CHUNK_SIZE = 200
     
     for i in range(0, len(lines), CHUNK_SIZE):
         chunk_lines = lines[i:i + CHUNK_SIZE]
@@ -711,10 +745,9 @@ def redact_docx(input_path: str, output_path: str, selected_types: Optional[List
         new_text, findings = _apply_replacements_to_text(original, selected_types)
         return (para, original, new_text, findings)
 
-    # Use ThreadPoolExecutor with fewer workers to avoid memory spikes on 512MB RAM
-    results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        results = list(executor.map(process_text_func, paragraphs_to_process))
+    # On Render's Free Tier (0.1 CPU), ThreadPoolExecutor causes massive context-switching overhead.
+    # Processing sequentially on a single core is actually FASTER when CPU is heavily throttled.
+    results = [process_text_func(item) for item in paragraphs_to_process]
 
     # Safely apply updates to the DOCX tree sequentially
     for para, original, new_text, findings in results:
