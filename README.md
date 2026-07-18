@@ -1,5 +1,8 @@
 # 🛡️ Privacy Shield: Enterprise PII Redaction Tool
 
+> ⚠️ **Important Note on Performance:** 
+> Please be patient when processing large documents for the first time! This application's backend is hosted on Render's free tier, which restricts CPU access to a fraction of a single core (0.1 CPU). Because Privacy Shield relies on heavy AI-driven Natural Language Processing (NLP) models (~500MB spaCy pipelines) to intelligently understand context, it may take a few minutes to chew through dense, multi-page PDFs or DOCX files under these severe hardware limits.
+
 Welcome to **Privacy Shield**! This is a full-stack, AI-powered application designed to instantly detect and redact Personally Identifiable Information (PII) from dense legal and financial documents (like Red Herring Prospectuses, IPO filings, and contracts). 
 
 Unlike standard redaction tools that just black out text, Privacy Shield replaces sensitive data with **realistic, context-aware synthetic data** (e.g., replacing a real name with a fake name, or a real phone number with a fake one) to maintain the readability and flow of the document.
