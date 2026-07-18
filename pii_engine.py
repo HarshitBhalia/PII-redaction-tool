@@ -603,12 +603,25 @@ def redact_text_segment(text: str, selected_types: Optional[List[str]] = None) -
     redacted_lines = []
     all_findings = []
     
-    # Chunk lines into groups of 200 to drastically reduce spaCy overhead (200x faster than line-by-line)
-    # 200 lines is about ~15KB, which is perfectly safe for 512MB RAM but minimizes NLP instantiation overhead.
-    CHUNK_SIZE = 200
+    # Safe character limit for spaCy on 512MB RAM is ~5000 chars per chunk
+    MAX_CHARS = 5000
     
-    for i in range(0, len(lines), CHUNK_SIZE):
-        chunk_lines = lines[i:i + CHUNK_SIZE]
+    current_chunk = []
+    current_len = 0
+    chunks = []
+    
+    for line in lines:
+        current_chunk.append(line)
+        current_len += len(line) + 1 # +1 for \n
+        if current_len >= MAX_CHARS:
+            chunks.append(current_chunk)
+            current_chunk = []
+            current_len = 0
+            
+    if current_chunk:
+        chunks.append(current_chunk)
+        
+    for chunk_lines in chunks:
         chunk_text = '\n'.join(chunk_lines)
         
         if not chunk_text.strip():
