@@ -65,13 +65,3 @@ The backend does the heavy lifting. Serverless functions (like AWS Lambda or Ver
 6. **Download**: The final, sanitized document is packaged and a download link is sent back to the React frontend.
 
 ---
-
-## 📸 Screenshots
-
-*(To add screenshots, take a snip of your live website, drop the image files into your GitHub repository, and update the links below!)*
-
-![Dashboard Upload Screen](https://via.placeholder.com/800x450.png?text=Dashboard+Upload+Screen)
-*The sleek, dark-themed Next.js upload dashboard.*
-
-![Processing Metrics](https://via.placeholder.com/800x450.png?text=Processing+Metrics)
-*Live evaluation metrics showing Precision, Recall, and Total PII Found.*
