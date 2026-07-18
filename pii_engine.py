@@ -621,6 +621,7 @@ def redact_text_segment(text: str, selected_types: Optional[List[str]] = None) -
     if current_chunk:
         chunks.append(current_chunk)
         
+    import time
     for chunk_lines in chunks:
         chunk_text = '\n'.join(chunk_lines)
         
@@ -629,6 +630,10 @@ def redact_text_segment(text: str, selected_types: Optional[List[str]] = None) -
             continue
             
         findings = detect_pii(chunk_text, selected_types)
+        
+        # AGGRESSIVE CPU YIELDING: Force python to release the GIL/CPU for 50ms 
+        # so Gunicorn web workers can answer /api/status heartbeats!
+        time.sleep(0.05)
         
         if not findings:
             redacted_lines.extend(chunk_lines)
