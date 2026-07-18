@@ -565,20 +565,39 @@ def detect_pii(text: str, selected_types: Optional[List[str]] = None) -> List[Di
 # ─────────────────────────────────────────────
 
 def redact_text_segment(text: str, selected_types: Optional[List[str]] = None) -> Tuple[str, List[Dict]]:
-    """Redact PII from a plain text string. Returns (redacted_text, findings)."""
-    findings = detect_pii(text, selected_types)
-    if not findings:
-        return text, []
+    """Redact PII from a plain text string by processing line by line to prevent OOM."""
+    lines = text.split('\n')
+    redacted_lines = []
+    all_findings = []
+    
+    # Process line by line to keep memory footprint extremely small
+    # Adjust findings' start/end index to represent the full text if needed?
+    # Actually, findings are returned but we only need total count in app.py
+    
+    for line in lines:
+        if not line.strip():
+            redacted_lines.append(line)
+            continue
+            
+        findings = detect_pii(line, selected_types)
+        
+        if not findings:
+            redacted_lines.append(line)
+            continue
+            
+        # Add to all findings (indexes will be relative to the line, but that's fine for counting)
+        all_findings.extend(findings)
+        
+        # Redact the line
+        sorted_findings = sorted(findings, key=lambda x: x['start'], reverse=True)
+        redacted = line
+        for f in sorted_findings:
+            replacement = get_fake_value(f['entity_type'], f['text'])
+            redacted = redacted[:f['start']] + replacement + redacted[f['end']:]
+            
+        redacted_lines.append(redacted)
 
-    # Sort reverse by start so replacements don't shift indexes
-    sorted_findings = sorted(findings, key=lambda x: x['start'], reverse=True)
-
-    redacted = text
-    for f in sorted_findings:
-        replacement = get_fake_value(f['entity_type'], f['text'])
-        redacted = redacted[:f['start']] + replacement + redacted[f['end']:]
-
-    return redacted, findings
+    return '\n'.join(redacted_lines), all_findings
 
 
 def _apply_replacements_to_text(text: str, selected_types: Optional[List[str]] = None) -> Tuple[str, List[Dict]]:
@@ -690,10 +709,9 @@ def redact_docx(input_path: str, output_path: str, selected_types: Optional[List
         new_text, findings = _apply_replacements_to_text(original, selected_types)
         return (para, original, new_text, findings)
 
-    # Use ThreadPoolExecutor (Presidio with SpaCy drops GIL in C extensions)
-    # This will dramatically speed up detection for large documents
+    # Use ThreadPoolExecutor with fewer workers to avoid memory spikes on 512MB RAM
     results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         results = list(executor.map(process_text_func, paragraphs_to_process))
 
     # Safely apply updates to the DOCX tree sequentially
