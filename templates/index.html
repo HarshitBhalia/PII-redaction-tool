@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PII Redaction Tool — Privacy Shield</title>
+  <meta name="description" content="AI-powered PII Redaction Tool. Upload your documents and automatically detect and replace all personally identifiable information with realistic fake data." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/overrides.css" />
+</head>
+<body>
+
+<!-- ──────────────────────────────────────── -->
+<!-- ANIMATED SHADER BACKGROUND CANVAS -->
+<!-- ──────────────────────────────────────── -->
+<canvas id="shaderCanvas" aria-hidden="true"></canvas>
+
+<!-- ──────────────────────────────────────── -->
+<!-- HEADER -->
+<!-- ──────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">Privacy Shield</span>
+        <span class="logo-sub">PII Redaction Tool</span>
+      </div>
+    </div>
+    <div class="header-badge">
+      <span class="badge-dot"></span>
+      <span>All processing is local</span>
+    </div>
+  </div>
+</header>
+
+<!-- ──────────────────────────────────────── -->
+<!-- HERO -->
+<!-- ──────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-tag">🛡️ Hybrid NLP + Regex Detection</div>
+    <h1 class="hero-title">
+      Redact PII from<br/>
+      <span class="gradient-text">Documents Instantly</span>
+    </h1>
+    <p class="hero-desc">
+      Upload any document and our AI-powered engine will detect & replace all personally
+      identifiable information with realistic fake data — names, emails, phones, addresses, and more.
+    </p>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num">11+</span>
+        <span class="stat-label">PII Types</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">~92%</span>
+        <span class="stat-label">Precision</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">~88%</span>
+        <span class="stat-label">Recall</span>
+      </div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="shield-animation">
+      <div class="shield-outer"></div>
+      <div class="shield-middle"></div>
+      <div class="shield-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────── -->
+<!-- MAIN CONTENT -->
+<!-- ──────────────────────────────────────── -->
+<main class="main-content">
+  <div class="container">
+
+    <!-- ── STEP 1: Upload ── -->
+    <section class="step-section" id="step-upload">
+      <div class="step-header">
+        <div class="step-number">01</div>
+        <div>
+          <h2 class="step-title">Upload Document</h2>
+          <p class="step-desc">Supports DOCX, PDF, and TXT files up to 50MB</p>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".docx,.pdf,.txt" hidden />
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <p class="upload-title">Drop your document here</p>
+        <p class="upload-sub">or <button class="upload-browse" id="browseBtn">browse files</button></p>
+        <div class="upload-formats">
+          <span class="format-tag">DOCX</span>
+          <span class="format-tag">PDF</span>
+          <span class="format-tag">TXT</span>
+        </div>
+      </div>
+
+      <!-- File Preview Card -->
+      <div class="file-card" id="fileCard" style="display:none">
+        <div class="file-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="file-info">
+          <span class="file-name" id="fileName">document.docx</span>
+          <span class="file-size" id="fileSize">0 KB</span>
+        </div>
+        <div class="file-status" id="fileStatus">
+          <div class="spinner"></div>
+          <span>Uploading...</span>
+        </div>
+        <button class="file-remove" id="removeFile" title="Remove file">✕</button>
+      </div>
+    </section>
+
+    <!-- ── STEP 2: Configure ── -->
+    <section class="step-section" id="step-configure" style="opacity:0.4;pointer-events:none">
+      <div class="step-header">
+        <div class="step-number">02</div>
+        <div>
+          <h2 class="step-title">Configure Detection</h2>
+          <p class="step-desc">Select which PII types to detect and redact</p>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <!-- PII Types -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <h3>PII Types to Redact</h3>
+            <div class="select-controls">
+              <button class="ctrl-btn" id="selectAll">All</button>
+              <button class="ctrl-btn" id="selectNone">None</button>
+            </div>
+          </div>
+          <div class="pii-types-grid" id="piiTypesGrid">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <h3>Processing Options</h3>
+          </div>
+          <div class="options-list">
+            <label class="option-item" id="opt-consistency">
+              <input type="checkbox" checked id="clearMapping" />
+              <div class="option-content">
+                <span class="option-title">Fresh mapping per run</span>
+                <span class="option-desc">Each run gets new fake values (uncheck for consistent values across runs)</span>
+              </div>
+              <div class="toggle-switch">
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Live Text Preview -->
+          <div class="preview-section">
+            <h4>🔍 Live PII Preview</h4>
+            <p class="preview-hint">Paste a sample text to see detection in real-time</p>
+            <textarea id="previewInput" class="preview-input" placeholder="Paste sample text here e.g. 'Contact John Doe at john@example.com or +91 9876543210'"></textarea>
+            <button class="btn-secondary" id="previewBtn">Detect PII</button>
+            <div class="preview-results" id="previewResults"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STEP 3: Process ── -->
+    <section class="step-section" id="step-process" style="opacity:0.4;pointer-events:none">
+      <div class="step-header">
+        <div class="step-number">03</div>
+        <div>
+          <h2 class="step-title">Redact & Download</h2>
+          <p class="step-desc">Process your document and download the redacted version</p>
+        </div>
+      </div>
+
+      <div class="process-area">
+        <div class="process-controls">
+          <button class="btn-primary btn-large" id="redactBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Start Redaction
+          </button>
+          <button class="btn-secondary" id="evaluateBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Evaluate Quality
+          </button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-area" id="progressArea" style="display:none">
+          <div class="progress-header">
+            <span class="progress-label" id="progressLabel">Initializing...</span>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressFill"></div>
+          </div>
+          <div class="progress-steps" id="progressSteps">
+            <div class="pstep active" id="ps1">📤 Loading document</div>
+            <div class="pstep" id="ps2">🔍 Detecting PII</div>
+            <div class="pstep" id="ps3">🔄 Replacing with fakes</div>
+            <div class="pstep" id="ps4">💾 Saving output</div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-area" id="resultsArea" style="display:none">
+          <!-- Stats Overview -->
+          <div class="results-overview">
+            <div class="result-metric" id="rm-total">
+              <span class="rm-value">0</span>
+              <span class="rm-label">PII Found</span>
+            </div>
+            <div class="result-metric" id="rm-precision">
+              <span class="rm-value">—</span>
+              <span class="rm-label">Precision</span>
+            </div>
+            <div class="result-metric" id="rm-recall">
+              <span class="rm-value">—</span>
+              <span class="rm-label">Recall</span>
+            </div>
+            <div class="result-metric" id="rm-f1">
+              <span class="rm-value">—</span>
+              <span class="rm-label">F1 Score</span>
+            </div>
+          </div>
+
+          <!-- Entity Breakdown Table -->
+          <div class="results-table-wrap" id="entityTable" style="display:none">
+            <h3 class="table-title">PII Entity Breakdown</h3>
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Entity Type</th>
+                  <th>Count</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>F1</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Download -->
+          <div class="download-area" id="downloadArea" style="display:none">
+            <div class="download-success">
+              <div class="download-icon">✅</div>
+              <div class="download-info">
+                <h3>Redaction Complete!</h3>
+                <p id="downloadDesc">Your document has been processed.</p>
+              </div>
+            </div>
+            <button class="btn-download" id="downloadBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Redacted Document
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /container -->
+</main>
+
+<!-- ──────────────────────────────────────── -->
+<!-- HOW IT WORKS -->
+<!-- ──────────────────────────────────────── -->
+<section class="how-section">
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-sub">Our hybrid 4-layer pipeline ensures maximum detection accuracy</p>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)">🧠</div>
+        <h3>Layer 1: NER Model</h3>
+        <p>spaCy's transformer model identifies names, organizations, and locations using contextual understanding</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2)">🔍</div>
+        <h3>Layer 2: Presidio</h3>
+        <p>Microsoft Presidio's built-in recognizers for emails, phones, SSNs, credit cards, and 50+ entity types</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706)">⚡</div>
+        <h3>Layer 3: Custom Regex</h3>
+        <p>Specialized patterns for Indian PAN, Aadhaar, phone numbers, passports, and regional identifiers</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon" style="background: linear-gradient(135deg, #10b981, #059669)">🎭</div>
+        <h3>Layer 4: Faker</h3>
+        <p>Consistent fake replacements via HashMap — "Rashi Patil" always maps to the same fake name</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────── -->
+<!-- FOOTER -->
+<!-- ──────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Privacy Shield — PII Redaction Tool
+      </div>
+      <p class="footer-text">
+        Powered by Presidio · spaCy · Faker · Flask<br/>
+        All data processed locally. Nothing leaves your machine.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

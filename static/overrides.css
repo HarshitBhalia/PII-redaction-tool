@@ -1,0 +1,217 @@
+/* ══════════════════════════════════════════════════════════════
+   MASTER VISIBILITY OVERRIDES — Golden-background-safe
+   Loaded after style.css so every rule here wins.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Stronger global dark overlay ─────────────────────────────── */
+body::before {
+  background:
+    radial-gradient(ellipse 100% 80% at 50% 0%,   rgba(0,0,0,0.65) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 100% at 50% 100%, rgba(0,0,0,0.70) 0%, transparent 65%),
+    rgba(0,0,0,0.40) !important;
+}
+
+/* ── Universal dark-halo text-shadow ──────────────────────────── */
+h1,h2,h3,h4,h5,h6,
+p, span, small, label, li, a,
+.step-title, .step-desc,
+.hero-title, .hero-desc,
+.pii-type-name, .pii-type-example,
+.option-title, .option-desc,
+.preview-hint, .upload-title, .upload-sub,
+.section-title, .section-sub,
+.how-card h3, .how-card p,
+.download-info h3, .download-info p,
+.footer-logo, .footer-text,
+.progress-label, .progress-pct,
+.rm-label, .metric-value, .stat-label,
+.file-name, .file-size, .file-status,
+.logo-name, .logo-sub, .header-badge,
+.ctrl-btn, .format-tag, .table-title,
+.config-card-header h3,
+.results-table th, .results-table td,
+.pstep, .upload-browse,
+.btn-primary, .btn-secondary, .btn-download {
+  text-shadow:
+    0 0 6px  rgba(0,0,0,1),
+    0 0 14px rgba(0,0,0,1),
+    0 1px 3px rgba(0,0,0,1),
+    0 2px 8px rgba(0,0,0,1) !important;
+}
+
+/* ── All card backgrounds fully opaque dark ───────────────────── */
+.config-card,
+.process-area,
+.upload-zone,
+.file-card,
+.how-card,
+.result-metric,
+.results-table-wrap,
+.progress-area,
+.download-area,
+.how-section,
+.footer {
+  background: rgba(4, 4, 12, 0.98) !important;
+}
+
+.pii-type-item,
+.option-item {
+  background: rgba(3, 3, 10, 0.97) !important;
+}
+
+.preview-input, .preview-input:focus {
+  background: rgba(2, 2, 8, 0.97) !important;
+}
+
+/* ── Text colours: everything white / bright ──────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Gradient-fill elements — keep their gradient */
+.gradient-text,
+.stat-num,
+.rm-value,
+.step-number {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+/* Body-level text */
+p, .hero-desc, .step-desc, .section-sub,
+.how-card p, .option-desc, .preview-hint,
+.upload-sub, .footer-text, .file-size,
+.logo-sub, .stat-label, .rm-label,
+.metric-value, .progress-label, .pstep,
+.table-title, .download-info p {
+  color: #eef4ff !important;
+}
+
+/* PII items */
+.pii-type-name    { color: #ffffff !important; font-weight: 700 !important; }
+.pii-type-example { color: #daeaff !important; font-weight: 500 !important; }
+
+/* Option items */
+.option-title { color: #ffffff !important; font-weight: 700 !important; }
+.option-desc  { color: #daeaff !important; }
+
+/* Table */
+.results-table th { color: #c0d8f8 !important; font-weight: 700 !important; }
+.results-table td { color: #eef4ff !important; }
+
+/* Config card */
+.config-card-header h3 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* Upload */
+.upload-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.2rem !important;
+}
+.upload-sub { color: #daeaff !important; }
+
+/* Steps */
+.step-title { color: #ffffff !important; font-weight: 800 !important; }
+.step-desc  {
+  color: #daeaff !important;
+  font-weight: 500 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Disabled buttons readable */
+.btn-primary:disabled {
+  opacity: 1 !important;
+  background: rgba(99,102,241,0.45) !important;
+  color: #ffffff !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+.btn-secondary:disabled {
+  opacity: 1 !important;
+  background: rgba(255,255,255,0.08) !important;
+  color: #c8daf0 !important;
+  border-color: rgba(255,255,255,0.22) !important;
+  cursor: not-allowed !important;
+}
+
+/* Active buttons */
+.btn-primary  { color: #ffffff !important; }
+.btn-secondary { color: #eef4ff !important; }
+.btn-download { color: #ffffff !important; }
+
+/* Inputs */
+.preview-input, textarea,
+input[type="text"], input[type="email"] {
+  color: #ffffff !important;
+}
+.preview-input::placeholder, textarea::placeholder {
+  color: #6888aa !important;
+  opacity: 1 !important;
+  font-style: italic;
+}
+
+/* File card */
+.file-name   { color: #ffffff !important; font-weight: 600 !important; }
+.file-size   { color: #b8d0ee !important; }
+.file-status { color: #daeaff !important; }
+.file-remove { color: #8a9bbe !important; }
+
+/* Control buttons */
+.ctrl-btn {
+  color: #eef4ff !important;
+  border-color: rgba(255,255,255,0.28) !important;
+  background: rgba(255,255,255,0.08) !important;
+  font-weight: 600 !important;
+}
+
+/* Header */
+.logo-name    { color: #ffffff !important; font-weight: 700 !important; }
+.logo-sub     { color: #b8d0ee !important; }
+.header-badge { color: #86efb8 !important; font-weight: 600 !important; }
+
+/* Hero tag */
+.hero-tag {
+  color: #c4b5fd !important;
+  background: rgba(139,92,246,0.18) !important;
+  border-color: rgba(139,92,246,0.40) !important;
+}
+
+/* Progress */
+.pstep        { color: #8a9bbe !important; }
+.pstep.active { color: #a78bfa !important; }
+.pstep.done   { color: #34d399 !important; }
+.progress-pct   { color: #a78bfa !important; font-weight: 700 !important; }
+.progress-label { color: #daeaff !important; font-weight: 600 !important; }
+
+/* Format tags */
+.format-tag {
+  color: #eef4ff !important;
+  background: rgba(255,255,255,0.10) !important;
+  border-color: rgba(255,255,255,0.22) !important;
+  font-weight: 600 !important;
+}
+
+/* How It Works */
+.section-title { color: #ffffff !important; }
+.section-sub   { color: #daeaff !important; font-weight: 500 !important; }
+.how-card h3   { color: #ffffff !important; }
+.how-card p    { color: #daeaff !important; }
+
+/* Download */
+.download-info h3 { color: #ffffff !important; }
+.download-info p  { color: #daeaff !important; }
+
+/* Footer */
+.footer-logo { color: #daeaff !important; }
+.footer-text { color: #9ab8d8 !important; line-height: 1.9 !important; }
+
+/* Hero */
+.hero-title { color: #ffffff !important; }
+.hero-desc  { color: #eef4ff !important; }
