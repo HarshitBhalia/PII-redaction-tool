@@ -277,7 +277,14 @@ def evaluate():
         if ext == 'docx':
             from docx import Document
             doc = Document(input_path)
-            text = "\n".join([p.text for p in doc.paragraphs])
+            parts = []
+            char_count = 0
+            for p in doc.paragraphs:
+                parts.append(p.text)
+                char_count += len(p.text)
+                if char_count > 6000:  # Only read enough for the sample
+                    break
+            text = "\n".join(parts)
         elif ext == 'txt':
             with open(input_path, 'r', encoding='utf-8', errors='replace') as f:
                 text = f.read()
@@ -291,8 +298,8 @@ def evaluate():
             except ImportError:
                 text = "[PDF text extraction requires PyMuPDF]"
 
-        # Run detection on sample (first 50000 chars for speed)
-        sample = text[:50000]
+        # Run detection on sample (first 5000 chars to prevent spaCy memory spikes on micro-CPUs)
+        sample = text[:5000]
         findings = detect_pii(sample)
 
         # Count by type
