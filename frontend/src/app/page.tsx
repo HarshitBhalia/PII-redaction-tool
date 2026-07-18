@@ -154,17 +154,22 @@ export default function Home() {
     if (!fileId) return;
     try {
       setIsEvaluating(true);
+      setError(null);
       const res = await fetch(`${API_URL}/api/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_id: fileId })
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Evaluation failed on server');
+      }
       if (data.overall_precision !== undefined) {
         setEvaluationResult(data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Evaluation error:', e);
+      setError(e.message || 'An error occurred during evaluation');
     } finally {
       setIsEvaluating(false);
     }
