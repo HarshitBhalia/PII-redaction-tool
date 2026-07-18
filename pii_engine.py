@@ -327,7 +327,7 @@ def _get_analyzer():
         try:
             config = {
                 "nlp_engine_name": "spacy",
-                "models": [{"lang_code": "en", "model_name": "en_core_web_lg"}]
+                "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}]
             }
             provider = NlpEngineProvider(nlp_configuration=config)
             nlp_engine = provider.create_engine()
