@@ -13,7 +13,10 @@ export default function Home() {
   const [evaluationResult, setEvaluationResult] = useState<any>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  if (API_URL.endsWith('/')) {
+    API_URL = API_URL.slice(0, -1);
+  }
   
   // Configuration State
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set([
